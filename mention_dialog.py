@@ -6,7 +6,7 @@ from PyQt5.QtGui import *
 from pydantic import BaseModel, Field
 from sympy import sec
 
-class DialogConfig(BaseModel):
+class DialogParam(BaseModel):
     choices: list[str] = Field([])
 
     title: str
@@ -33,7 +33,11 @@ class _DialogState(BaseModel):
 
 
 class MentionDialog(QDialog):
-    def __init__(self, config: DialogConfig):
+    """
+    定时的弹窗，仅包含展示、自动关闭逻辑，不包含任何其他副作用，保存记录啥的，不是这个模块的任务
+    """
+
+    def __init__(self, config: DialogParam):
         super().__init__()
         # 设置该 widget 及其所有子控件的字体大小
         self.setStyleSheet("""
@@ -93,11 +97,11 @@ class MentionDialog(QDialog):
             self.layout().addWidget(delay_button)
 
         ## DEBUG_CLOSE_BUTTON
-        # if config.debug:
-        #     debug_close_button = QPushButton(self)
-        #     debug_close_button.setText('DEBUG CLOSE')
-        #     debug_close_button.clicked.connect(self.__debug_close)
-        #     layout.addWidget(debug_close_button)
+        if config.debug:
+            debug_close_button = QPushButton(self)
+            debug_close_button.setText('DEBUG CLOSE')
+            debug_close_button.clicked.connect(self.__debug_close)
+            layout.addWidget(debug_close_button)
 
         layout.addStretch(1)
         self.__timer = self.__loop_timer()
@@ -164,5 +168,5 @@ class MentionDialog(QDialog):
 
 if __name__ == '__main__':
     app = QApplication([])
-    dialog = MentionDialog(DialogConfig(title='title',duration=5, msg='但该休息了！', debug=True, choices=['画画', '健身', '娱乐', '学习']))
+    dialog = MentionDialog(DialogParam(title='title',duration=5, msg='但该休息了！', debug=True, choices=['画画', '健身', '娱乐', '学习']))
     print(dialog.start_mentioning())
