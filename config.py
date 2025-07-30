@@ -28,6 +28,8 @@ class Config(BaseModel):
 
     debug: bool = False
 
+    muted: bool = False
+
 def get_config():
     if Path('config.json').exists():
         try: 

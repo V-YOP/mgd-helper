@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
 from config import Config, get_config
+from media_player import MyMediaPlayer
 from mention_dialog import DialogParam, DialogResult, MentionDialog
 from tray_holder import TrayHolder
 
@@ -17,7 +18,7 @@ class State(BaseModel):
     current_round: int
 
 class Main:
-    def __init__(self, config: Config, tray: TrayHolder) -> None:
+    def __init__(self, config: Config, tray: TrayHolder, media_player: MyMediaPlayer) -> None:
         self.__config = config
         self.__state = State(
             is_running=False,
@@ -26,6 +27,7 @@ class Main:
             can_delay=True,
             current_round=1
         )
+        self.__media_player = media_player
         self.__timer = QTimer()
         self.__timer.setInterval(1000)
         self.__timer.timeout.connect(self.__loop)
@@ -73,7 +75,17 @@ class Main:
             debug=self.__config.debug,
         ))
         self.__state.is_showing_dialog = True
+
+        if not self.__config.muted:
+            self.__media_player.play_dingdong()
+            self.__media_player.start_clock()
+            
         response = dialog.start_mentioning()
+
+        if not self.__config.muted:
+            self.__media_player.stop_clock()
+            self.__media_player.play_alarm()
+
         self.__state.is_showing_dialog = False
         self.__update_state(response, long_mention)
         self.__append_log(response)
@@ -110,6 +122,6 @@ class Main:
 if __name__ == '__main__':
     app = QApplication([])
     app.setQuitOnLastWindowClosed(False)
-    main = Main(get_config(), TrayHolder(QIcon(str((Path(__file__).parent/'icon.ico')))))
+    main = Main(get_config(), TrayHolder(QIcon(str((Path(__file__).parent/'asset'/'icon.ico')))), MyMediaPlayer())
     main.start()
     app.exec()
