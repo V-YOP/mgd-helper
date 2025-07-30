@@ -182,6 +182,7 @@ class MentionDialog(QDialog):
         self.__media_player.play_dingdong()
         self.__media_player.start_clock()
         code = self.exec()
+        self.__media_player.stop_clock() # 点击delay 时 __after_timeout 不会被执行到
         self.__state.state = 'DONE'
         self.__state.close_time = datetime.now()
         if code == 1:
