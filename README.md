@@ -9,5 +9,5 @@
 # 编译
 
 ```sh
-pyinstaller.exe main.py --add-data 'icon.ico:.' --icon 'asset/icon.ico' --noconsole --onefile --name MGD-Helper
+pyinstaller.exe main.py --add-data 'asset/*:asset/' --icon 'asset/icon.ico' --noconsole --onefile --name MGD-Helper
 ```

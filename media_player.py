@@ -1,3 +1,4 @@
+from pathlib import Path
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaPlaylist
 from PyQt5.QtCore import QUrl, QObject
 
@@ -12,28 +13,44 @@ class MyMediaPlayer(QObject):
 
         # 循环播放 clock.mp3 使用 Playlist
         self.clock_player = QMediaPlayer()
-        self.clock_player.setMedia(QMediaContent(QUrl.fromLocalFile("asset/clock.mp3")))
+        self.clock_player.setMedia(QMediaContent(QUrl.fromLocalFile(str(Path(__file__).parent / 'asset' / "clock.mp3"))))
         def handle_media_status(status):
             if status == QMediaPlayer.EndOfMedia:
                 self.clock_player.setPosition(0)  # 回到开头
                 self.clock_player.play()
         self.clock_player.mediaStatusChanged.connect(handle_media_status)
 
-        
+        self.__muted = False
 
     def play_alarm(self):
-        self.alarm_player.setMedia(QMediaContent(QUrl.fromLocalFile("asset/alarm.wav")))
+        if self.__muted:
+            return
+        self.alarm_player.setMedia(QMediaContent(QUrl.fromLocalFile(str(Path(__file__).parent / 'asset' / "alarm.wav"))))
         self.alarm_player.play()
 
     def play_dingdong(self):
-        self.dingdong_player.setMedia(QMediaContent(QUrl.fromLocalFile("asset/ding-dong.wav")))
+        if self.__muted:
+            return
+        self.dingdong_player.setMedia(QMediaContent(QUrl.fromLocalFile(str(Path(__file__).parent / 'asset' / "ding-dong.wav"))))
         self.dingdong_player.play()
 
     def start_clock(self):
+        if self.__muted:
+            return
         self.clock_player.play()
 
     def stop_clock(self):
+        if self.__muted:
+            return
         self.clock_player.stop()
+
+    @property
+    def muted(self):
+        return self.__muted
+    @muted.setter
+    def muted(self, x: bool):
+        self.stop_clock()
+        self.__muted = x
 
 if __name__ == "__main__":
     from PyQt5.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget

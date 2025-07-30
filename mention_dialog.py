@@ -6,6 +6,8 @@ from PyQt5.QtGui import *
 from pydantic import BaseModel, Field
 from sympy import sec
 
+from media_player import MyMediaPlayer
+
 class DialogParam(BaseModel):
     choices: list[str] = Field([])
 
@@ -38,7 +40,7 @@ class MentionDialog(QDialog):
     定时的弹窗，仅包含展示、自动关闭逻辑，不包含任何其他副作用，保存记录啥的，不是这个模块的任务
     """
 
-    def __init__(self, config: DialogParam):
+    def __init__(self, config: DialogParam, media_player: MyMediaPlayer):
         super().__init__()
         # 设置该 widget 及其所有子控件的字体大小
         self.setStyleSheet("""
@@ -102,7 +104,6 @@ class MentionDialog(QDialog):
         self.__timer_label = QLabel(self)
         layout.addWidget(self.__timer_label)
         
-        
         ## DELAY_BUTTON
         if config.can_delay:
             delay_button = QPushButton(config.delay_msg or 'DELAY ME', self)
@@ -116,15 +117,18 @@ class MentionDialog(QDialog):
             debug_close_button.clicked.connect(self.__debug_close)
             layout.addWidget(debug_close_button)
 
-        self.__close_button = QPushButton(self)
-        self.__close_button.setText("完成")
-        self.__close_button.setEnabled(False)
-        self.__close_button.clicked.connect(lambda: self.done(0))
-        layout.addWidget(self.__close_button)
+        # self.__close_button = QPushButton(self)
+        # self.__close_button.setText("完成")
+        # self.__close_button.setEnabled(False)
+        # self.__close_button.clicked.connect(lambda: self.done(0))
+        # layout.addWidget(self.__close_button)
 
         layout.addStretch(1)
         self.__timer = self.__loop_timer()
         self.__timer.start()
+
+        self.__media_player = media_player
+        self.__first_timeout = True
 
     def __choice_widgets(self):
         button_group = QButtonGroup(self)
@@ -142,7 +146,6 @@ class MentionDialog(QDialog):
             button_group.addButton(v, i + 1)
         return button_group, btns
 
-
     def __loop_timer(self) -> QTimer:
         timer = QTimer(self)
         timer.setInterval(100)
@@ -159,8 +162,13 @@ class MentionDialog(QDialog):
     
     def __after_timeout(self):
         """will repeat execute after timeout"""
+        if self.__first_timeout:
+            self.__first_timeout = False
+            self.__media_player.play_alarm()
+
+        self.__media_player.stop_clock()
         if self.__selected_choice_getter() and self.__selected_inflammation_getter() != -1:
-            self.__close_button.setEnabled(True)
+            self.done(0)
 
     def __debug_close(self):
         self.done(1)
@@ -171,6 +179,8 @@ class MentionDialog(QDialog):
     def start_mentioning(self):
         self.__state.open_time = datetime.now()
         self.__state.state = 'RUNNING'
+        self.__media_player.play_dingdong()
+        self.__media_player.start_clock()
         code = self.exec()
         self.__state.state = 'DONE'
         self.__state.close_time = datetime.now()
@@ -196,5 +206,7 @@ class MentionDialog(QDialog):
 
 if __name__ == '__main__':
     app = QApplication([])
-    dialog = MentionDialog(DialogParam(title='title',duration=5, msg='但该休息了！', debug=True, choices=['LEAVING', '画画', '健身', '娱乐', '学习']))
+    player = MyMediaPlayer()
+    dialog = MentionDialog(DialogParam(title='title',duration=5, msg='但该休息了！', debug=True, choices=['LEAVING', '画画', '健身', '娱乐', '学习']), player)
     print(dialog.start_mentioning())
+    

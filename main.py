@@ -28,6 +28,8 @@ class Main:
             current_round=1
         )
         self.__media_player = media_player
+        self.__media_player.muted = self.__config.muted
+        
         self.__timer = QTimer()
         self.__timer.setInterval(1000)
         self.__timer.timeout.connect(self.__loop)
@@ -73,18 +75,10 @@ class Main:
             can_delay=self.__state.can_delay,
             delay_msg=self.__config.delay_msg,
             debug=self.__config.debug,
-        ))
+        ), self.__media_player)
         self.__state.is_showing_dialog = True
 
-        if not self.__config.muted:
-            self.__media_player.play_dingdong()
-            self.__media_player.start_clock()
-            
         response = dialog.start_mentioning()
-
-        if not self.__config.muted:
-            self.__media_player.stop_clock()
-            self.__media_player.play_alarm()
 
         self.__state.is_showing_dialog = False
         self.__update_state(response, long_mention)
