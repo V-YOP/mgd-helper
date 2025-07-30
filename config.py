@@ -24,7 +24,7 @@ class Config(BaseModel):
     delay_msg: str = '延迟 5 分钟显示'
     delay_time: int = 5
 
-    choices: list[str] = ['画画', '学习', '刷视频', '玩游戏']
+    choices: list[str] = ['不在电脑前', '画画', '纸笔画画', '学习', '刷视频', '玩游戏']
 
     debug: bool = False
 
@@ -35,5 +35,5 @@ def get_config():
         except: 
             pass
     default_config = Config()
-    Path('config.json').write_text(default_config.model_dump_json(indent=4))
+    Path('config.json').write_text(default_config.model_dump_json(indent=4), encoding='utf-8')
     return default_config

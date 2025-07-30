@@ -58,7 +58,7 @@ class Main:
         self.__update_tray()
         if datetime.now() < self.__state.next_mention_time:
             return
-        self.__trigger_dialog(self.__state.current_round > self.__config.long_mention_rounds)
+        self.__trigger_dialog(self.__state.current_round >= self.__config.long_mention_rounds)
 
     def __trigger_dialog(self, long_mention: bool):
         if self.__state.is_showing_dialog:

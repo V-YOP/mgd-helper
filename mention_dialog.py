@@ -21,8 +21,9 @@ class DialogParam(BaseModel):
     debug: bool = False
 
 class DialogResult(BaseModel):
-    action: Literal['DEBUG_CLOSE', 'LEAVING', 'DELAY', 'NORMAL']
+    action: Literal['DEBUG_CLOSE', 'DELAY', 'NORMAL']
     action_content: str = ''
+    inflammation: int
     open_time: datetime
     close_time: datetime
     
@@ -73,16 +74,28 @@ class MentionDialog(QDialog):
 
         ## choices
         layout.addWidget(QLabel('我正在：', self))
-        button_group, btns = self.__choice_widgets()
+        choice_button_group, choice_btns = self.__choice_widgets()
         def selected_choice_getter() -> str:
-            if button_group.checkedId() == -1:
+            if choice_button_group.checkedId() == -1:
                 return ''
-            return self.__config.choices[button_group.checkedId() - 1]
+            return self.__config.choices[choice_button_group.checkedId() - 1]
         self.__selected_choice_getter = selected_choice_getter
-        btns_widget = QWidget(self)
-        btn_layout = QHBoxLayout(btns_widget)
-        [btn_layout.addWidget(btn) for btn in btns]
-        layout.addWidget(btns_widget)
+        choice_btns_widget = QWidget(self)
+        choice_btn_layout = QHBoxLayout(choice_btns_widget)
+        [choice_btn_layout.addWidget(btn) for btn in choice_btns]
+        layout.addWidget(choice_btns_widget)
+
+        ## 眼睛炎症程度
+        layout.addWidget(QLabel("眼睛炎症程度：", self))
+        inflammation_button_group, inflammation_btns = self.__inflammation_widgets()
+        def selected_inflammation_getter():
+            return inflammation_button_group.checkedId()
+        self.__selected_inflammation_getter = selected_inflammation_getter
+        inflammation_btns_widget = QWidget(self)
+        inflammation_btn_layout = QHBoxLayout(inflammation_btns_widget)
+        [inflammation_btn_layout.addWidget(btn) for btn in inflammation_btns]
+        layout.addWidget(inflammation_btns_widget)
+
 
         ## MSG AND TIMER_MSG
         layout.addWidget(QLabel(config.msg, self))
@@ -103,6 +116,12 @@ class MentionDialog(QDialog):
             debug_close_button.clicked.connect(self.__debug_close)
             layout.addWidget(debug_close_button)
 
+        self.__close_button = QPushButton(self)
+        self.__close_button.setText("完成")
+        self.__close_button.setEnabled(False)
+        self.__close_button.clicked.connect(lambda: self.done(0))
+        layout.addWidget(self.__close_button)
+
         layout.addStretch(1)
         self.__timer = self.__loop_timer()
         self.__timer.start()
@@ -111,6 +130,14 @@ class MentionDialog(QDialog):
         button_group = QButtonGroup(self)
 
         btns = [QRadioButton(i, self) for i in self.__config.choices]
+        for i, v in enumerate(btns):
+            button_group.addButton(v, i + 1)
+        return button_group, btns
+
+    def __inflammation_widgets(self):
+        button_group = QButtonGroup(self)
+
+        btns = [QRadioButton(f'{i}', self) for i in range(1, 6)]
         for i, v in enumerate(btns):
             button_group.addButton(v, i + 1)
         return button_group, btns
@@ -127,11 +154,13 @@ class MentionDialog(QDialog):
             last_delta = expect_close_time - datetime.now()
             self.__timer_label.setText(f'关闭时间剩余：{last_delta.total_seconds():.1f} s（至 {expect_close_time:%H:%M:%S} ）')
             if last_delta.total_seconds() < 0:
-                self.__on_timeout()
+                self.__after_timeout()
         return timer
     
-    def __on_timeout(self):
-        self.done(0)
+    def __after_timeout(self):
+        """will repeat execute after timeout"""
+        if self.__selected_choice_getter() and self.__selected_inflammation_getter() != -1:
+            self.__close_button.setEnabled(True)
 
     def __debug_close(self):
         self.done(1)
@@ -146,12 +175,13 @@ class MentionDialog(QDialog):
         self.__state.state = 'DONE'
         self.__state.close_time = datetime.now()
         if code == 1:
-            return DialogResult(action='DEBUG_CLOSE', open_time=self.__state.open_time, close_time=self.__state.close_time)
+            return DialogResult(action='DEBUG_CLOSE', open_time=self.__state.open_time, close_time=self.__state.close_time, inflammation=self.__selected_inflammation_getter() )
         if code == 2:
-            return DialogResult(action='DELAY', open_time=self.__state.open_time, close_time=self.__state.close_time)
+            return DialogResult(action='DELAY', open_time=self.__state.open_time, close_time=self.__state.close_time, inflammation=self.__selected_inflammation_getter())
         if choice := self.__selected_choice_getter():
-            return DialogResult(action='NORMAL', action_content=choice, open_time=self.__state.open_time, close_time=self.__state.close_time)
-        return DialogResult(action='LEAVING', open_time=self.__state.open_time, close_time=self.__state.close_time)
+            return DialogResult(action='NORMAL', action_content=choice, open_time=self.__state.open_time, close_time=self.__state.close_time, inflammation=self.__selected_inflammation_getter() )
+        raise NotImplementedError('Impossible')
+        # return DialogResult(action='LEAVING', open_time=self.__state.open_time, close_time=self.__state.close_time)
 
     # 重写closeEvent方法，禁用Alt+F4
     def closeEvent(self, event):
@@ -164,9 +194,7 @@ class MentionDialog(QDialog):
         else:
             super().keyPressEvent(event)
 
-
-
 if __name__ == '__main__':
     app = QApplication([])
-    dialog = MentionDialog(DialogParam(title='title',duration=5, msg='但该休息了！', debug=True, choices=['画画', '健身', '娱乐', '学习']))
+    dialog = MentionDialog(DialogParam(title='title',duration=5, msg='但该休息了！', debug=True, choices=['LEAVING', '画画', '健身', '娱乐', '学习']))
     print(dialog.start_mentioning())
